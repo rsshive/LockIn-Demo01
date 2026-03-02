@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LockIn | Zen Workspace</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #0a0a0c;
+            --accent-color: #7c4dff;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #ffffff;
+            --text-dim: #a0a0a0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: transparent;
+            /* Allow transparent OS window */
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Container */
+        .container {
+            background: radial-gradient(circle at top right, rgba(26, 26, 46, 0.9), rgba(10, 10, 12, 0.9));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+            width: 100vw;
+            height: 100vh;
+            text-align: center;
+            box-shadow: none;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-app-region: drag;
+            /* Make entire container draggable */
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            margin-bottom: 32px;
+            font-weight: 300;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 24px;
+        }
+
+        input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+            -webkit-app-region: no-drag;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+            -webkit-app-region: no-drag;
+        }
+
+        button:hover {
+            background: #6a3de8;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Custom Close Button for frameless window */
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-app-region: no-drag;
+            z-index: 100;
+        }
+
+        .close-btn:hover {
+            background: rgba(229, 57, 53, 0.8);
+            transform: none;
+        }
+
+        /* Focus Mode Styles */
+        .focus-mode .close-btn {
+            display: none;
+        }
+
+        .focus-mode .container {
+            max-width: 100%;
+            height: 100vh;
+            width: 100vw;
+            border-radius: 0;
+            border: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-color);
+            /* Solid opaque background */
+            -webkit-app-region: no-drag;
+            /* NOT draggable */
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        /* Whitelist Sidebar */
+        #whitelistSidebar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 280px;
+            background: rgba(20, 20, 25, 0.8);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 50;
+            -webkit-app-region: no-drag;
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #whitelistSidebar.visible {
+            transform: translateX(0);
+        }
+
+        .sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .app-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .app-item.active {
+            background: rgba(124, 77, 255, 0.2);
+            border-color: var(--accent-color);
+        }
+
+        .app-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #fff;
+        }
+
+        .app-title {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 4px;
+        }
+
+        /* Checkbox List Styles */
+        .app-list-container {
+            width: 100%;
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            margin-bottom: 15px;
+            -webkit-app-region: no-drag;
+            text-align: left;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .checkbox-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 12px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--accent-color);
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: white;
+            user-select: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #timer {
+            font-size: 6rem;
+            font-weight: 300;
+            margin: 20px 0;
+            color: var(--accent-color);
+            text-shadow: 0 0 20px rgba(124, 77, 255, 0.5);
+        }
+
+        .task-display {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+
+        .status-tag {
+            background: rgba(124, 77, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Background Glows */
+        .glow {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: var(--accent-color);
+            filter: blur(150px);
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        /* Floating Mode Styles */
+        body.floating-mode {
+            background: transparent;
+        }
+
+        .floating-mode .glow {
+            display: none;
+        }
+
+        .floating-mode .container {
+            width: 100vw;
+            height: 100vh;
+            border-radius: 12px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 12, 0.9);
+            border: 1px solid var(--accent-color);
+            -webkit-app-region: drag;
+            /* Make draggable */
+        }
+
+        .floating-mode #timer {
+            font-size: 2.5rem;
+            margin: 0;
+            text-shadow: none;
+        }
+
+        .floating-mode .task-display {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .floating-mode p,
+        .floating-mode .status-tag,
+        .floating-mode .close-btn,
+        .floating-mode #whitelistSidebar {
+            display: none !important;
+        }
+
+        .floating-mode button {
+            -webkit-app-region: no-drag;
+            padding: 5px 15px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            border: none;
+            background: #e53935;
+            width: auto;
+        }
+    </style>
+</head>
+
+<body id="body">
+    <div class="glow" style="top: 10%; right: 10%;"></div>
+    <div class="glow" style="bottom: 10%; left: 10%;"></div>
+
+    <div class="container" id="mainContainer">
+        <button class="close-btn" id="closeAppBtn" onclick="closeApp()">X</button>
+        <div id="setupView">
+            <h1>LockIn</h1>
+            <p class="subtitle">Commit to deep work. No turning back.</p>
+            <p id="errorMsg"
+                style="color: #ff5252; font-size: 0.85rem; height: 1.2em; margin-bottom: 15px; font-weight: 500;"></p>
+
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="What is your major goal?">
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 24px;">
+                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                    <input type="number" id="timeInput" placeholder="Time (Minutes)" value="25" min="1" step="1">
+                </div>
+                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                    <input type="password" id="passInput" placeholder="Pass to Unlock (Optional)">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <span style="font-size: 0.85rem; color: var(--text-dim);">Select Apps for Whitelist Mode</span>
+                <button onclick="document.getElementById('appChecklist').classList.toggle('hidden')"
+                    style="background: rgba(255,255,255,0.1); border: none; padding: 4px 10px; width: auto; font-size: 0.75rem; border-radius: 6px; color: #ccc;">Show/Hide
+                    List</button>
+            </div>
+            <div class="app-list-container hidden" id="appChecklist">
+                <p style="color: gray; font-size: 0.9rem; text-align: center; padding: 10px;">Loading apps...</p>
+            </div>
+
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="startLockIn('hard')" style="background: #e53935; flex: 1;">HARD LOCK</button>
+                <button onclick="startLockIn('floating')" style="background: #1e88e5; flex: 1;">FLOATING TIMER</button>
+                <button onclick="startLockIn('whitelist')"
+                    style="background: #43a047; width: 100%; margin-top: 5px;">WHITELIST MODE</button>
+            </div>
+        </div>
+
+        <div id="focusView" class="hidden">
+            <div id="whitelistSidebar">
+                <div class="sidebar-title">Allowed Apps</div>
+                <div id="sidebarAppList">
+                    <p style="color: gray; font-size: 0.9rem;">Loading...</p>
+                </div>
+            </div>
+
+            <div class="status-tag">LOCKED IN</div>
+            <div id="timer">25:00</div>
+            <div class="task-display" id="activeTask">Your Task Name</div>
+            <p style="color: var(--text-dim);">Distractions are now blocked at the system level.</p>
+            <p style="margin-top: 20px; font-size: 0.8rem; color: #444;">(Alt + F4 is still enabled for safety)</p>
+
+            <button onclick="stopLockIn()" class="unlock-btn"
+                style="margin-top: 15px; background: transparent; border: 1px solid #444; width: auto; padding: 5px 20px;">UNLOCK</button>
+        </div>
+
+        <!-- Custom Unlock Modal -->
+        <div id="unlockModal" class="hidden"
+            style="position: absolute; top:0; left:0; width:100vw; height:100vh; background: rgba(10,10,12,0.95); z-index: 1000; display:flex; flex-direction:column; justify-content:center; align-items:center; backdrop-filter: blur(10px);">
+            <div
+                style="background: rgba(26,26,46,0.9); padding: 30px; border-radius: 12px; text-align: center; border: 1px solid var(--accent-color); width: 80%; max-width: 400px; -webkit-app-region: no-drag;">
+                <h3 style="margin-bottom: 10px;">Unlock Required</h3>
+                <p style="color: #aaa; margin-bottom: 20px; font-size: 0.9rem;">Enter your password to drop out early:
+                </p>
+                <input type="password" id="unlockPassInput" style="width: 100%; margin-bottom: 10px;"
+                    placeholder="Password" onkeydown="if(event.key === 'Enter') submitUnlockPass()">
+                <p id="unlockError" style="color: #ff5252; font-size: 0.8rem; margin-bottom: 15px; height: 1em;"></p>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="submitUnlockPass()" style="flex: 1; background: #e53935;">Submit</button>
+                    <button onclick="cancelUnlock()"
+                        style="flex: 1; background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        console.log("LockIn Script Loaded");
+
+        async function loadApps() {
+            const sidebarList = document.getElementById('sidebarAppList');
+            const checklist = document.getElementById('appChecklist');
+            const apps = await ipcRenderer.invoke('get-apps');
+
+            sidebarList.innerHTML = ''; // clear loading text
+            if (checklist) checklist.innerHTML = '';
+
+            if (apps.length === 0) {
+                sidebarList.innerHTML = '<p style="color: gray; font-size: 0.9rem;">No apps found.</p>';
+                if (checklist) checklist.innerHTML = '<p style="color: gray; font-size: 0.9rem; text-align: center;">No apps found.</p>';
+                return;
+            }
+
+            // Save reference globally so startLockIn can access it
+            window.availableApps = apps;
+
+            apps.forEach((app, index) => {
+                let title = app.MainWindowTitle;
+                if (title && title.length > 50) title = title.substring(0, 50) + '...';
+
+                // For Checkbox List (Setup View)
+                if (checklist) {
+                    const cbItem = document.createElement('div');
+                    cbItem.className = 'checkbox-item';
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.id = `app_cb_${index}`;
+                    cb.value = app.Name;
+
+                    const lbl = document.createElement('label');
+                    lbl.htmlFor = `app_cb_${index}`;
+                    lbl.textContent = `${app.Name} - ${title}`;
+
+                    cbItem.appendChild(cb);
+                    cbItem.appendChild(lbl);
+                    checklist.appendChild(cbItem);
+                }
+            });
+        }
+
+        function selectApp(appName, element) {
+            // Remove active class from all
+            document.querySelectorAll('.app-item').forEach(el => el.classList.remove('active'));
+            // Add active class to clicked
+            if (element) {
+                element.classList.add('active');
+            } else {
+                const targetEl = document.querySelector(`.app-item[data-appname="${appName}"]`);
+                if (targetEl) targetEl.classList.add('active');
+            }
+
+            // Send to main process
+            ipcRenderer.send('focus-external-app', appName);
+            console.log("Allowed app switched to:", appName);
+        }
+
+        // Load apps on startup
+        loadApps();
+
+        function closeApp() {
+            ipcRenderer.send('close-app');
+        }
+
+        function startLockIn(mode) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.innerText = '';
+
+            const taskInput = document.getElementById('taskInput');
+            const task = taskInput.value.trim();
+            const timeVal = parseInt(document.getElementById('timeInput').value) || 25;
+            const passVal = document.getElementById('passInput').value;
+
+            if (!task) {
+                errorMsg.innerText = "Please enter a task to Lock In!";
+                return;
+            }
+
+            // Save the password for unlock
+            window.lockPassword = passVal;
+
+            // Trigger Electron Lock based on mode
+            if (mode === 'whitelist') {
+                // Gather checked apps
+                const checkboxes = document.querySelectorAll('#appChecklist input[type="checkbox"]:checked');
+                const selectedAppNames = Array.from(checkboxes).map(cb => cb.value);
+
+                if (selectedAppNames.length === 0) {
+                    errorMsg.innerText = "Please check at least one app to whitelist first!";
+                    return;
+                }
+
+                // Populate Sidebar ONLY with checked apps
+                const sidebarList = document.getElementById('sidebarAppList');
+                sidebarList.innerHTML = '';
+
+                window.availableApps.forEach(app => {
+                    if (selectedAppNames.includes(app.Name)) {
+                        const item = document.createElement('div');
+                        item.className = 'app-item';
+                        item.setAttribute('data-appname', app.Name);
+                        item.onclick = () => selectApp(app.Name, item);
+
+                        let title = app.MainWindowTitle;
+                        if (title && title.length > 50) title = title.substring(0, 50) + '...';
+
+                        item.innerHTML = `
+                            <div class="app-name">${app.Name}</div>
+                            <div class="app-title">${title || 'Running'}</div>
+                        `;
+                        sidebarList.appendChild(item);
+                    }
+                });
+
+
+                ipcRenderer.send('start-whitelist-lock', selectedAppNames);
+                document.body.classList.add('focus-mode');
+                document.body.classList.remove('floating-mode');
+                document.getElementById('whitelistSidebar').classList.add('visible');
+
+                // Select and focus the first app in the array automatically
+                selectApp(selectedAppNames[0], null);
+            } else if (mode === 'hard') {
+                ipcRenderer.send('start-hard-lock');
+                document.body.classList.add('focus-mode');
+                document.body.classList.remove('floating-mode');
+            } else if (mode === 'floating') {
+                ipcRenderer.send('start-floating-timer');
+                document.body.classList.add('floating-mode');
+                document.body.classList.remove('focus-mode');
+            }
+
+            // Update UI
+            document.getElementById('activeTask').innerText = task;
+            document.getElementById('setupView').classList.add('hidden');
+            document.getElementById('focusView').classList.remove('hidden');
+
+            // Start a simple countdown timer
+            let timeLeft = timeVal * 60;
+            const timerDisplay = document.getElementById('timer');
+
+            // Format initial display
+            const updateTimerDisplay = () => {
+                const hours = Math.floor(timeLeft / 3600);
+                const mins = Math.floor((timeLeft % 3600) / 60);
+                const secs = timeLeft % 60;
+
+                const displayHours = hours > 0 ? (hours < 10 ? "0" + hours + ":" : hours + ":") : "";
+                const displayMins = mins < 10 ? "0" + mins : mins;
+                const displaySecs = secs < 10 ? "0" + secs : secs;
+
+                timerDisplay.innerText = displayHours + displayMins + ":" + displaySecs;
+            };
+            updateTimerDisplay();
+
+            const timerInterval = setInterval(() => {
+                if (timeLeft > 0) {
+                    timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    stopLockIn(true); // Auto-stop (bypasses password)
+                }
+            }, 1000);
+
+            // Store interval ID for stopping
+            window.activeTimer = timerInterval;
+        }
+
+        function stopLockIn(isAuto = false) {
+            if (!isAuto && window.lockPassword) {
+                document.getElementById('unlockModal').classList.remove('hidden');
+                document.getElementById('unlockPassInput').value = '';
+                document.getElementById('unlockError').innerText = '';
+                setTimeout(() => document.getElementById('unlockPassInput').focus(), 100);
+                return;
+            }
+            proceedStopLockIn();
+        }
+
+        function cancelUnlock() {
+            document.getElementById('unlockModal').classList.add('hidden');
+        }
+
+        function submitUnlockPass() {
+            const inputPass = document.getElementById('unlockPassInput').value;
+            if (inputPass !== window.lockPassword) {
+                document.getElementById('unlockError').innerText = "Incorrect Password! Get back to work.";
+                return;
+            }
+            document.getElementById('unlockModal').classList.add('hidden');
+            proceedStopLockIn();
+        }
+
+        function proceedStopLockIn() {
+            if (window.activeTimer) clearInterval(window.activeTimer);
+            ipcRenderer.send('stop-lock');
+
+            // Revert UI
+            document.getElementById('setupView').classList.remove('hidden');
+            document.getElementById('focusView').classList.add('hidden');
+            document.getElementById('whitelistSidebar').classList.remove('visible');
+            document.body.classList.remove('focus-mode', 'floating-mode');
+        }
+
+        // Auto-stop when window loses focus (Windows Key pressed)
+        ipcRenderer.on('window-blur', () => {
+            console.log("Window blur detected - focus reclaimed by main");
+        });
+    </script>
+</body>
+
+</html>
